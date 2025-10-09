@@ -30,19 +30,27 @@ static void block_range(unsigned long long gstart, unsigned long long gend,
     *end   = cnt? (*start + cnt - 1ULL) : (gstart - 1ULL);
 }
 
-void des_ecb_do(unsigned long long key, unsigned char *buf, int len, int do_encrypt) {
-    DES_cblock kblock;
+// Construcción de clave DES compatible con el código del profesor
+static void make_des_key_from_long(unsigned long long key, DES_cblock *out_kblock) {
     unsigned long long k = 0ULL;
     unsigned long long tmp = key;
     for (int i = 0; i < 8; ++i) {
-        unsigned char byte = (unsigned char)((tmp >> (8*i)) & 0xFF);
-        k |= ((unsigned long long)(byte) << (8*i));
+        tmp <<= 1; /* igual que el profe: desplaza 1 antes de tomar el byte */
+        unsigned long long mask = (0xFEULL << (i * 8)); // 11111110 en cada byte
+        k += (tmp & mask);
     }
-    memcpy(&kblock, &k, sizeof(DES_cblock));
-    DES_set_odd_parity(&kblock);
+    memcpy(out_kblock, &k, sizeof(DES_cblock));
+    DES_set_odd_parity(out_kblock); // ajustar paridad
+}
+
+
+void des_ecb_do(unsigned long long key, unsigned char *buf, int len, int do_encrypt) {
+    DES_cblock kblock;
+    make_des_key_from_long(key, &kblock);  // <-- usar la construcción del profe
+
     DES_key_schedule ks;
     if (DES_set_key_checked(&kblock, &ks) != 0) {
-        return;
+        return; // clave inválida por paridad; no hacemos nada
     }
     for (int off = 0; off < len; off += 8) {
         DES_cblock in, out;
@@ -265,6 +273,15 @@ int main(int argc, char *argv[]){
         else if (strncmp(argv[i], "--reps=",   7) == 0) reps    = atoi    (argv[i] + 7);
     }
 
+    if (argc > 3 && argv[3][0] != '-') {
+        unsigned long long val = strtoull(argv[3], NULL, 10);
+        if (val > 0ULL) end_k = val;
+    }
+    if (argc > 4 && argv[4][0] != '-') {
+        int rv = atoi(argv[4]);
+        if (rv > 0) reps = rv;
+    }
+
     //search_str = argv[2];
     //unsigned long long end_k = (1ULL << 24); // por defecto, pequeño para pruebas; cambiar si quieres
     //int reps = 5;
@@ -287,31 +304,47 @@ int main(int argc, char *argv[]){
     if (fread(cipher, 1, cipher_len, f) != (size_t)cipher_len) { perror("fread"); free(cipher); fclose(f); MPI_Finalize(); return 1; }
     fclose(f);
 
-    // Cargar keyword desde keyword_path y apuntar search_str 
+    // Cargar keyword
     {
         FILE *fk = fopen(keyword_path, "rb");
-        if (!fk) {
-            if (id == 0) perror("fopen keyword");
-            free(cipher);
-            MPI_Finalize();
-            return 1;
+        if (fk != NULL) {
+            static char keyword_buf[512];
+            size_t kwlen = fread(keyword_buf, 1, sizeof(keyword_buf)-1, fk);
+            fclose(fk);
+            keyword_buf[kwlen] = '\0';
+            while (kwlen > 0 && (keyword_buf[kwlen-1] == '\n' || keyword_buf[kwlen-1] == '\r')) {
+                keyword_buf[--kwlen] = '\0';
+            }
+            if (kwlen == 0) {
+                if (id == 0) fprintf(stderr, "keyword vacío en %s\n", keyword_path);
+                free(cipher);
+                MPI_Finalize();
+                return 1;
+            }
+            search_str = keyword_buf;
+            if (id == 0) printf("Read keyword from file: '%s' (len %zu)\n", search_str, kwlen);
+        } else {
+            char *kwdup = strdup(keyword_path);
+            if (!kwdup) {
+                if (id == 0) fprintf(stderr, "Memory error strdup keyword\n");
+                free(cipher);
+                MPI_Finalize();
+                return 1;
+            }
+            size_t kwlen = strlen(kwdup);
+            while (kwlen > 0 && (kwdup[kwlen-1] == '\n' || kwdup[kwlen-1] == '\r')) {
+                kwdup[--kwlen] = '\0';
+            }
+            if (kwlen == 0) {
+                if (id == 0) fprintf(stderr, "keyword literal vacío\n");
+                free(kwdup);
+                free(cipher);
+                MPI_Finalize();
+                return 1;
+            }
+            search_str = kwdup;
+            if (id == 0) printf("Using keyword literal: '%s' (len %zu)\n", search_str, kwlen);
         }
-        static char keyword_buf[512];
-        size_t kwlen = fread(keyword_buf, 1, sizeof(keyword_buf)-1, fk);
-        fclose(fk);
-        keyword_buf[kwlen] = '\0';
-        // recortar CR/LF finales
-        while (kwlen > 0 && (keyword_buf[kwlen-1] == '\n' || keyword_buf[kwlen-1] == '\r')) {
-            keyword_buf[--kwlen] = '\0';
-        }
-        if (kwlen == 0) {
-            if (id == 0) fprintf(stderr, "keyword vacío en %s\n", keyword_path);
-            free(cipher);
-            MPI_Finalize();
-            return 1;
-        }
-        search_str = keyword_buf; // tryKey usa esta variable global
-        if (id == 0) printf("Keyword: '%s' (len %zu)\n", search_str, kwlen);
     }
 
     unsigned long long total_range = (end_k >= start_k) ? (end_k - start_k + 1ULL) : 0ULL;

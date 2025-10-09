@@ -1,0 +1,16 @@
+Proceso 0 leyendo cipher_easy.bin
+Using keyword literal: 'UNIQUEKEY_2025_DBK' (len 18)
+Rep 1: elapsed = 0.345939 s, found_key = 65536
+Rep 2: elapsed = 0.348407 s, found_key = 65536
+Rep 3: elapsed = 0.350775 s, found_key = 65536
+Rep 4: elapsed = 0.351228 s, found_key = 65536
+Rep 5: elapsed = 0.345799 s, found_key = 65536
+Average elapsed over 5 runs: 0.348430 s
+FOUND: 65536 -> Los gatitos son una de las criaturas más adorables del mundo animal. 
+Desde el momento en que nacen, estos pequeños felinos capturan nuestros corazones con sus ojos 
+curiosos y sus travesuras interminables. Los gatitos son naturalmente curiosos. 
+Exploran cada rincón de su entorno, trepan por todas partes y investigan objetos nuevos con 
+cautela y fascinación. Cada gatito tiene su propia personalidad única, desde los tímidos hasta 
+los audaces, y cada uno enriquece nuestras vidas de maneras especiales e inesperadas.
+
+UNIQUEKEY_2025_DBK

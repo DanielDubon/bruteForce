@@ -1,0 +1,3 @@
+Proceso 0 leyendo cipher_hard.bin
+Using keyword literal: 'UNIQUEKEY_2025_DBK' (len 18)
+DYNAMIC result: N=4, chunk=1000, time=0.057041 s, iterations=26202, found_key=24860

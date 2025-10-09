@@ -1,0 +1,3 @@
+Proceso 0 leyendo cipher_med.bin
+Using keyword literal: 'UNIQUEKEY_2025_DBK' (len 18)
+DYNAMIC result: N=4, chunk=1000, time=0.171604 s, iterations=83175, found_key=81920

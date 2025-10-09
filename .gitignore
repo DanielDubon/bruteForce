@@ -1,0 +1,14 @@
+# Compilados y ejecutables
+bruteforce
+encrypt_file
+*.out
+*.exe
+*.o
+*.so
+
+# Archivos binarios generados
+*.bin
+
+# Resultados experimentales
+*.csv
+*.log
